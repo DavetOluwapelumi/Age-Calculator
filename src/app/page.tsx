@@ -8,6 +8,7 @@ export default function Home() {
   const [year, setYear] = useState<string>("");
   const [age, setAge] = useState<{ years: number; months: number; days: number } | null>(null);
   const [errors, setErrors] = useState<{ day?: string; month?: string; year?: string; form?: string }>({});
+  const [countdown, setCountdown] = useState<{ months: number, days: number } | null>(null);
 
   const isValidDate = (d: number, m: number, y: number) => {
     const date = new Date(y, m - 1, d);
@@ -22,19 +23,41 @@ export default function Home() {
     return date <= today; // cannot be in the future
   };
 
+  const getNextBirthdayCountdown = (birthdate: Date) => {
+    const today = new Date();
+    const nextBirthday = new Date(today.getFullYear(), birthdate.getMonth(), birthdate.getDay())
+
+    if (nextBirthday < today) nextBirthday.setFullYear(today.getFullYear() + 1);
+
+    let months = nextBirthday.getMonth() - today.getMonth();
+    let days = nextBirthday.getDay() - today.getMonth();
+
+    if (days < 0) {
+      months -= 1;
+      // get days in prev month
+      const prevMonth = new Date(nextBirthday.getFullYear(), nextBirthday.getMonth(), 0);
+      days += prevMonth.getDate();
+    }
+    if (months < 0) months += 12;
+
+    return { months, days };
+  }
+
   const calculateAge = () => {
+    const newErrors: { day?: string; month?: string; year?: string; form?: string } = {};
+
+    if (!day.trim()) newErrors.day = "Required";
+    if (!month.trim()) newErrors.month = "Required";
+    if (!year.trim()) newErrors.year = "Required";
+
     const d = Number(day);
     const m = Number(month);
     const y = Number(year);
 
-    const newErrors: { day?: string; month?: string; year?: string; form?: string } = {};
-    if (!d) newErrors.day = "Required";
-    if (!m) newErrors.month = "Required";
-    if (!y) newErrors.year = "Required";
 
-    if (!newErrors.day && (d < 1 || d > 31)) newErrors.day = "Must be 1-31";
-    if (!newErrors.month && (m < 1 || m > 12)) newErrors.month = "Must be 1-12";
-    if (!newErrors.year && y < 1) newErrors.year = "Invalid";
+    if (!newErrors.day && (isNaN(d) || d < 1 || d > 31)) newErrors.day = "Must be 1-31";
+    if (!newErrors.month && (isNaN(m) || m < 1 || m > 12)) newErrors.month = "Must be 1-12";
+    if (!newErrors.year && (isNaN(y) || y < 1)) newErrors.year = "Invalid";
 
     if (Object.keys(newErrors).length === 0 && !isValidDate(d, m, y)) {
       newErrors.form = "Enter a valid date in the past";
@@ -65,13 +88,20 @@ export default function Home() {
     }
 
     setAge({ years, months, days });
+    const nextBirthdayCountdown = getNextBirthdayCountdown(birthDate);
+    setCountdown(nextBirthdayCountdown);
   };
+
+
 
   const resultOrDash = (value?: number) => (value !== undefined ? value : "--");
 
   return (
     <main className="min-h-screen flex bg-gray-100 items-center justify-center p-4">
       <div className="bg-white p-8 rounded-2xl rounded-br-[100px] shadow-lg w-full max-w-xl">
+        <h1 className="text-3xl font-extrabold tracking-tight text-gray-800 mb-8">
+          Age Calculator
+        </h1>
         <div className="flex flex-row gap-4 mb-6">
           <div className="flex flex-col gap-2">
             <label htmlFor="day" className="text-xs tracking-widest text-gray-500">DAY</label>
@@ -81,7 +111,7 @@ export default function Home() {
               placeholder="DD"
               value={day}
               onChange={(e) => setday(e.target.value)}
-              className={`border rounded-md p-3 w-24 text-lg font-bold focus:outline-none ${errors.day ? "border-red-500" : "border-gray-300"}`}
+              className={`border rounded-md p-3 w-24 text-lg font-bold focus:outline-none text-gray-600 placeholder:text-gray-100 ${errors.day ? "border-red-500" : "border-gray-300"}`}
             />
             {errors.day && <span className="text-xs text-red-600">{errors.day}</span>}
           </div>
@@ -93,7 +123,7 @@ export default function Home() {
               placeholder="MM"
               value={month}
               onChange={(e) => setMonth(e.target.value)}
-              className={`border rounded-md p-3 w-24 text-lg font-bold focus:outline-none ${errors.month ? "border-red-500" : "border-gray-300"}`}
+              className={`border rounded-md p-3 w-24 text-lg font-bold focus:outline-none text-gray-600 placeholder:text-gray-100 ${errors.month ? "border-red-500" : "border-gray-300"}`}
             />
             {errors.month && <span className="text-xs text-red-600">{errors.month}</span>}
           </div>
@@ -105,7 +135,7 @@ export default function Home() {
               placeholder="YYYY"
               value={year}
               onChange={(e) => setYear(e.target.value)}
-              className={`border rounded-md p-3 w-28 text-lg font-bold focus:outline-none ${errors.year ? "border-red-500" : "border-gray-300"}`}
+              className={`border rounded-md p-3 w-24 text-lg font-bold focus:outline-none text-gray-600 placeholder:text-gray-100 ${errors.year ? "border-red-500" : "border-gray-300"}`}
             />
             {errors.year && <span className="text-xs text-red-600">{errors.year}</span>}
           </div>
@@ -141,7 +171,17 @@ export default function Home() {
             <span className="text-purple-600 mr-2">{resultOrDash(age?.days)}</span>
             <span className="text-gray-900">days</span>
           </div>
+          {countdown && (
+            <div className="text-2xl mt-6 text-gray-700 italic font-bold">
+              🎂 Next birthday in:
+              <span className="text-purple-600 font-bold ml-2">
+                {countdown.months} months, {countdown.days} days
+              </span>
+            </div>
+          )}
         </div>
+
+
       </div>
     </main>
   );
